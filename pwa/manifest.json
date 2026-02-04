@@ -1,0 +1,27 @@
+{
+  "name": "DoDoQuest",
+  "short_name": "DoDoQuest",
+  "description": "Discover amazing places and complete treasure hunts across Mauritius",
+  "start_url": "/treasure_hunt/pwa/index.html",
+  "scope": "/treasure_hunt/pwa/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#667eea",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "assets/Logo192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/Logo512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["travel", "entertainment", "lifestyle"],
+  "screenshots": []
+}

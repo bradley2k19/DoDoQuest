@@ -1,0 +1,1095 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Treasure Hunt API",
+    "description": "RESTful API for Treasure Hunt Progressive Web Application - A gamified location-based experience in Mauritius",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://mywebsite.home/treasure_hunt/api",
+      "description": "Development server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "User authentication and password management"
+    },
+    {
+      "name": "Users",
+      "description": "User profile and statistics management"
+    },
+    {
+      "name": "Places",
+      "description": "Points of interest management"
+    },
+    {
+      "name": "Categories",
+      "description": "Place categorization"
+    },
+    {
+      "name": "Treasure Hunts",
+      "description": "Treasure hunt management"
+    },
+    {
+      "name": "Progress",
+      "description": "User hunt progress tracking"
+    },
+    {
+      "name": "Badges",
+      "description": "Achievement badges"
+    },
+    {
+      "name": "Favorites",
+      "description": "User favorites management"
+    },
+    {
+      "name": "Photos",
+      "description": "Photo upload and management"
+    },
+    {
+      "name": "Sync",
+      "description": "Offline synchronization"
+    },
+    {
+      "name": "Leaderboard",
+      "description": "User rankings and statistics"
+    },
+    {
+      "name": "Admin",
+      "description": "Administrative operations"
+    }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Register new user",
+        "description": "Create a new user account",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["username", "email", "password", "full_name", "user_type"],
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 50,
+                    "example": "john_doe"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "john@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 6,
+                    "example": "password123"
+                  },
+                  "full_name": {
+                    "type": "string",
+                    "example": "John Doe"
+                  },
+                  "user_type": {
+                    "type": "string",
+                    "enum": ["tourist", "student", "local"],
+                    "example": "tourist"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Email or username already exists"
+          },
+          "422": {
+            "description": "Validation failed"
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "User login",
+        "description": "Authenticate user and receive JWT token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "john@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "example": "password123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials"
+          }
+        }
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Request password reset",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reset token generated"
+          }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Reset password with token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["token", "new_password"],
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  },
+                  "new_password": {
+                    "type": "string",
+                    "minLength": 6
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset successful"
+          },
+          "400": {
+            "description": "Invalid or expired token"
+          }
+        }
+      }
+    },
+    "/users/profile": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get user profile",
+        "security": [{"BearerAuth": []}],
+        "responses": {
+          "200": {
+            "description": "Profile retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "put": {
+        "tags": ["Users"],
+        "summary": "Update user profile",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {"type": "string"},
+                  "full_name": {"type": "string"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated"
+          }
+        }
+      }
+    },
+    "/users/stats": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get user statistics",
+        "security": [{"BearerAuth": []}],
+        "responses": {
+          "200": {
+            "description": "Statistics retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserStats"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/places": {
+      "get": {
+        "tags": ["Places"],
+        "summary": "Get all places",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {"type": "integer", "default": 1}
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {"type": "integer", "default": 10, "maximum": 50}
+          },
+          {
+            "name": "city",
+            "in": "query",
+            "schema": {"type": "string"}
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Places retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedPlaces"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/places/{id}": {
+      "get": {
+        "tags": ["Places"],
+        "summary": "Get place by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "integer"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Place found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Place"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Place not found"
+          }
+        }
+      }
+    },
+    "/places/create": {
+      "post": {
+        "tags": ["Places"],
+        "summary": "Create new place",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Place created"
+          }
+        }
+      }
+    },
+    "/places/search": {
+      "get": {
+        "tags": ["Places"],
+        "summary": "Search places",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {"type": "string"},
+            "description": "Search query"
+          },
+          {
+            "name": "lat",
+            "in": "query",
+            "schema": {"type": "number"},
+            "description": "Latitude"
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "schema": {"type": "number"},
+            "description": "Longitude"
+          },
+          {
+            "name": "radius",
+            "in": "query",
+            "schema": {"type": "number", "default": 10},
+            "description": "Radius in km"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results"
+          }
+        }
+      }
+    },
+    "/categories": {
+      "get": {
+        "tags": ["Categories"],
+        "summary": "Get all categories",
+        "responses": {
+          "200": {
+            "description": "Categories retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {"type": "boolean"},
+                    "data": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/Category"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/categories/{id}": {
+      "get": {
+        "tags": ["Categories"],
+        "summary": "Get category by ID with places",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "integer"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Category found"
+          }
+        }
+      }
+    },
+    "/hunts": {
+      "get": {
+        "tags": ["Treasure Hunts"],
+        "summary": "Get all treasure hunts",
+        "parameters": [
+          {
+            "name": "difficulty",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["easy", "medium", "hard"]
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {"type": "integer"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hunts retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedHunts"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hunts/{id}": {
+      "get": {
+        "tags": ["Treasure Hunts"],
+        "summary": "Get hunt details with checkpoints",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "integer"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hunt found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HuntDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hunts/featured": {
+      "get": {
+        "tags": ["Treasure Hunts"],
+        "summary": "Get featured hunts",
+        "responses": {
+          "200": {
+            "description": "Featured hunts retrieved"
+          }
+        }
+      }
+    },
+    "/progress/start": {
+      "post": {
+        "tags": ["Progress"],
+        "summary": "Start a treasure hunt",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["hunt_id"],
+                "properties": {
+                  "hunt_id": {"type": "integer"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Hunt started"
+          },
+          "400": {
+            "description": "Hunt already started or max hunts reached"
+          }
+        }
+      }
+    },
+    "/progress/complete-checkpoint": {
+      "post": {
+        "tags": ["Progress"],
+        "summary": "Complete a checkpoint",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckpointCompletion"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Checkpoint completed"
+          }
+        }
+      }
+    },
+    "/progress/my-hunts": {
+      "get": {
+        "tags": ["Progress"],
+        "summary": "Get user's hunts",
+        "security": [{"BearerAuth": []}],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["in_progress", "completed", "abandoned"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User hunts retrieved"
+          }
+        }
+      }
+    },
+    "/badges": {
+      "get": {
+        "tags": ["Badges"],
+        "summary": "Get all badges",
+        "responses": {
+          "200": {
+            "description": "Badges retrieved"
+          }
+        }
+      }
+    },
+    "/badges/my-badges": {
+      "get": {
+        "tags": ["Badges"],
+        "summary": "Get user's earned badges",
+        "security": [{"BearerAuth": []}],
+        "responses": {
+          "200": {
+            "description": "User badges retrieved"
+          }
+        }
+      }
+    },
+    "/favorites": {
+      "get": {
+        "tags": ["Favorites"],
+        "summary": "Get user favorites",
+        "security": [{"BearerAuth": []}],
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["place", "hunt"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Favorites retrieved"
+          }
+        }
+      }
+    },
+    "/favorites/add": {
+      "post": {
+        "tags": ["Favorites"],
+        "summary": "Add to favorites",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["favoritable_type", "favoritable_id"],
+                "properties": {
+                  "favoritable_type": {
+                    "type": "string",
+                    "enum": ["place", "hunt"]
+                  },
+                  "favoritable_id": {"type": "integer"},
+                  "notes": {"type": "string"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Added to favorites"
+          }
+        }
+      }
+    },
+    "/leaderboard": {
+      "get": {
+        "tags": ["Leaderboard"],
+        "summary": "Get user rankings",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {"type": "integer", "default": 50}
+          },
+          {
+            "name": "user_type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["tourist", "student", "local"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Leaderboard retrieved"
+          }
+        }
+      }
+    },
+    "/admin/login": {
+      "post": {
+        "tags": ["Admin"],
+        "summary": "Admin login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": {"type": "string"},
+                  "password": {"type": "string"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Admin login successful"
+          }
+        }
+      }
+    },
+    "/admin/dashboard-stats": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Get dashboard statistics",
+        "security": [{"AdminAuth": []}],
+        "responses": {
+          "200": {
+            "description": "Stats retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardStats"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/users": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Get all users",
+        "security": [{"AdminAuth": []}],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {"type": "integer"}
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {"type": "integer"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Users retrieved"
+          }
+        }
+      }
+    },
+    "/admin/user/{user_id}": {
+      "put": {
+        "tags": ["Admin"],
+        "summary": "Update user",
+        "security": [{"AdminAuth": []}],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "integer"}
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {"type": "string"},
+                  "email": {"type": "string"},
+                  "account_status": {
+                    "type": "string",
+                    "enum": ["active", "suspended", "deleted"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Admin"],
+        "summary": "Delete user (soft delete)",
+        "security": [{"AdminAuth": []}],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "integer"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User deleted"
+          }
+        }
+      }
+    },
+    "/admin/create-category": {
+      "post": {
+        "tags": ["Admin"],
+        "summary": "Create category",
+        "security": [{"AdminAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": {"type": "string"},
+                  "description": {"type": "string"},
+                  "icon_url": {"type": "string"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Category created"
+          }
+        }
+      }
+    },
+    "/admin/category/{category_id}": {
+      "put": {
+        "tags": ["Admin"],
+        "summary": "Update category",
+        "security": [{"AdminAuth": []}],
+        "parameters": [
+          {
+            "name": "category_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "integer"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Category updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Admin"],
+        "summary": "Delete category",
+        "security": [{"AdminAuth": []}],
+        "parameters": [
+          {
+            "name": "category_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "integer"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Category deleted"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token for user authentication"
+      },
+      "AdminAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token for admin authentication"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "user_id": {"type": "integer"},
+          "username": {"type": "string"},
+          "email": {"type": "string"},
+          "full_name": {"type": "string"},
+          "user_type": {"type": "string", "enum": ["tourist", "student", "local"]},
+          "total_points": {"type": "integer"},
+          "level": {"type": "string", "enum": ["Novice", "Explorer", "Expert", "Master", "Legend"]},
+          "is_verified": {"type": "boolean"},
+          "account_status": {"type": "string"},
+          "created_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "success": {"type": "boolean"},
+          "message": {"type": "string"},
+          "data": {
+            "type": "object",
+            "properties": {
+              "user_id": {"type": "integer"},
+              "username": {"type": "string"},
+              "email": {"type": "string"},
+              "token": {"type": "string"}
+            }
+          }
+        }
+      },
+      "Place": {
+        "type": "object",
+        "properties": {
+          "place_id": {"type": "integer"},
+          "name": {"type": "string"},
+          "description": {"type": "string"},
+          "latitude": {"type": "number"},
+          "longitude": {"type": "number"},
+          "city": {"type": "string"},
+          "place_type": {"type": "string"},
+          "is_verified": {"type": "boolean"},
+          "status": {"type": "string"}
+        }
+      },
+      "PlaceCreate": {
+        "type": "object",
+        "required": ["name", "latitude", "longitude", "place_type", "category_ids"],
+        "properties": {
+          "name": {"type": "string"},
+          "description": {"type": "string"},
+          "latitude": {"type": "number"},
+          "longitude": {"type": "number"},
+          "city": {"type": "string"},
+          "place_type": {"type": "string"},
+          "category_ids": {
+            "type": "array",
+            "items": {"type": "integer"}
+          }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "properties": {
+          "category_id": {"type": "integer"},
+          "name": {"type": "string"},
+          "description": {"type": "string"},
+          "icon_url": {"type": "string"},
+          "place_count": {"type": "integer"}
+        }
+      },
+      "HuntDetail": {
+        "type": "object",
+        "properties": {
+          "hunt_id": {"type": "integer"},
+          "title": {"type": "string"},
+          "description": {"type": "string"},
+          "difficulty_level": {"type": "string"},
+          "reward_points": {"type": "integer"},
+          "is_featured": {"type": "boolean"},
+          "checkpoints": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "checkpoint_id": {"type": "integer"},
+                "sequence_order": {"type": "integer"},
+                "place_name": {"type": "string"},
+                "clue_text": {"type": "string"},
+                "challenge_type": {"type": "string"},
+                "points_awarded": {"type": "integer"}
+              }
+            }
+          }
+        }
+      },
+      "CheckpointCompletion": {
+        "type": "object",
+        "required": ["progress_id", "checkpoint_id", "verification_method"],
+        "properties": {
+          "progress_id": {"type": "integer"},
+          "checkpoint_id": {"type": "integer"},
+          "verification_method": {
+            "type": "string",
+            "enum": ["geofence", "QR", "photo", "quiz"]
+          },
+          "verification_data": {"type": "object"},
+          "hints_used": {"type": "integer"}
+        }
+      },
+      "UserStats": {
+        "type": "object",
+        "properties": {
+          "username": {"type": "string"},
+          "total_points": {"type": "integer"},
+          "level": {"type": "string"},
+          "hunts_completed": {"type": "integer"},
+          "badges_earned": {"type": "integer"},
+          "places_visited": {"type": "integer"},
+          "active_hunts": {"type": "integer"}
+        }
+      },
+      "DashboardStats": {
+        "type": "object",
+        "properties": {
+          "total_users": {"type": "integer"},
+          "total_places": {"type": "integer"},
+          "total_hunts": {"type": "integer"},
+          "pending_places": {"type": "integer"},
+          "pending_photos": {"type": "integer"},
+          "active_hunt_progress": {"type": "integer"}
+        }
+      },
+      "PaginatedPlaces": {
+        "type": "object",
+        "properties": {
+          "success": {"type": "boolean"},
+          "data": {
+            "type": "array",
+            "items": {"$ref": "#/components/schemas/Place"}
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "total": {"type": "integer"},
+              "page": {"type": "integer"},
+              "limit": {"type": "integer"},
+              "total_pages": {"type": "integer"}
+            }
+          }
+        }
+      },
+      "PaginatedHunts": {
+        "type": "object",
+        "properties": {
+          "success": {"type": "boolean"},
+          "data": {
+            "type": "array",
+            "items": {"$ref": "#/components/schemas/HuntDetail"}
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "total": {"type": "integer"},
+              "page": {"type": "integer"},
+              "limit": {"type": "integer"},
+              "total_pages": {"type": "integer"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

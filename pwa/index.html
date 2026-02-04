@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#667eea">
+    <meta name="description" content="Discover amazing places and complete treasure hunts across Mauritius">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <title>Treasure Hunt Mauritius</title>
+
+    <!-- Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+
+<body>
+    <!-- Offline Banner -->
+    <div id="offlineBanner" class="offline-banner">
+        📡 You are offline. Some features may be limited.
+    </div>
+
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-content">
+            <h1 class="app-title">DodoQuest</h1>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Home Page -->
+        <div id="home-page" class="page active">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Featured Hunts</h2>
+                </div>
+                <div id="featured-hunts"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">All Treasure Hunts</h2>
+                    <select id="difficulty-filter" class="form-control" style="width: auto;">
+                        <option value="">All Difficulties</option>
+                        <option value="easy">Easy</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
+                <div id="all-hunts"></div>
+            </div>
+        </div>
+
+        <!-- Explore Page -->
+        <div id="explore-page" class="page">
+            <div>
+                <button id="crete_place_btn" class="btn btn-primary" onclick="app.showCreatePlaceModal()">+ Create
+                    Place</button>
+            </div>
+            <div class="card">
+                <h2 class="card-title">Explore Places</h2>
+                <div id="map"></div>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Nearby Places</h2>
+                <div id="nearby-places"></div>
+            </div>
+        </div>
+
+        <!-- My Hunts Page -->
+        <div id="hunts-page" class="page">
+            <div>
+                <button id="crete_hunt_btn" class="btn btn-primary" onclick="app.showCreateHuntModal()">+ Create
+                    Hunt</button>
+            </div>
+            <div class="card">
+                <h2 class="card-title">Active Hunts</h2>
+                <div id="active-hunts"></div>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Completed Hunts</h2>
+                <div id="completed-hunts"></div>
+            </div>
+        </div>
+
+        <!-- Checkpoint Page -->
+        <div id="checkpoint-page" class="page">
+            <div id="checkpoint-container"></div>
+        </div>
+
+        <!-- Profile Page -->
+        
+        <div id="profile-page" class="page">
+            <div class="container">
+                <h1>My Profile</h1>
+
+                <div id="user-info"></div>
+                <div id="level-progress-container"></div>
+                <button class="btn btn-secondary btn-block" onclick="app.logout()">Logout</button>
+
+                <h2>Statistics</h2>
+                <div id="user-stats"></div>
+
+                <h2>My Badges</h2>
+                <div id="user-badges"></div>
+
+                <h2>Leaderboard</h2>
+                <div id="leaderboard-container"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <a href="#" class="nav-item active" data-page="home">
+            <span class="icon">🏠</span>
+            <span class="label">Home</span>
+        </a>
+        <a href="#" class="nav-item" data-page="explore">
+            <span class="icon">🗺️</span>
+            <span class="label">Explore</span>
+        </a>
+        <a href="#" class="nav-item" data-page="hunts">
+            <span class="icon">🎯</span>
+            <span class="label">My Hunts</span>
+        </a>
+        <a href="#" class="nav-item" data-page="profile">
+            <span class="icon">👤</span>
+            <span class="label">Profile</span>
+        </a>
+    </nav>
+
+    <!-- Hunt Detail Modal -->
+    <div id="hunt-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="app.closeHuntModal()">&times;</span>
+            <div id="hunt-detail-content"></div>
+        </div>
+    </div>
+
+    <!-- Login/Register Modal -->
+    <div id="auth-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Welcome to Treasure Hunt!</h2>
+            </div>
+
+            <div id="login-form">
+                <h3>Login</h3>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="login-email" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="login-password" class="form-control" required>
+                </div>
+                <button class="btn btn-primary btn-block" onclick="app.login()">Login</button>
+                <p style="text-align: center; margin-top: 15px;">
+                    Don't have an account?
+                    <a href="#" onclick="app.showRegisterForm()">Register here</a>
+                </p>
+            </div>
+
+            <div id="register-form" style="display: none;">
+                <h3>Register</h3>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="reg-username" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="reg-email" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="reg-password" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="reg-fullname" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>User Type</label>
+                    <select id="reg-usertype" class="form-control" required>
+                        <option value="tourist">Tourist</option>
+                        <option value="student">Student</option>
+                        <option value="local">Local</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary btn-block" onclick="app.register()">Register</button>
+                <p style="text-align: center; margin-top: 15px;">
+                    Already have an account?
+                    <a href="#" onclick="app.showLoginForm()">Login here</a>
+                </p>
+            </div>
+        </div>
+    </div>
+    <div id="placeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="placeModalTitle">Create Place</h2>
+                <span class="close" onclick="app.closePlaceModal()">&times;</span>
+            </div>
+            <form id="placeForm" onsubmit="app.savePlace(event)">
+                <input type="hidden" id="placeId" value="">
+
+                <div class="form-group">
+                    <label>Place Name *</label>
+                    <input type="text" id="placeName" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="placeDescription" class="form-control"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Latitude *</label>
+                    <input type="number" step="0.00001" id="latitude" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Longitude *</label>
+                    <input type="number" step="0.00001" id="longitude" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label>City</label>
+                    <input type="text" id="city" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label>Place Type *</label>
+                    <select id="placeType" class="form-control" required>
+                        <option value="monument">Monument</option>
+                        <option value="restaurant">Restaurant</option>
+                        <option value="museum">Museum</option>
+                        <option value="park">Park</option>
+                        <option value="beach">Beach</option>
+                        <option value="viewpoint">Viewpoint</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Save Place</button>
+            </form>
+        </div>
+    </div>
+    <!-- Hunt Creation Modal -->
+    <div id="huntModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2 id="huntModalTitle">Create New Treasure Hunt</h2>
+                <span class="close" onclick="app.closeHuntCreationModal()">&times;</span>
+            </div>
+            <div class="form-group">
+                <p style="background: #fff3cd; padding: 10px; border-radius: 5px; font-size: 13px; margin: 0;">
+                    ℹ️ <strong>Note:</strong> Your hunt will be reviewed by an admin before being published
+                    publicly.
+                </p>
+            </div>
+
+            <form id="huntForm" onsubmit="app.saveHunt(event)">
+                <input type="hidden" id="huntId">
+
+                <!-- Basic Info Section -->
+                <div style="margin-bottom: 30px;">
+                    <h3 style="margin-bottom: 15px; color: #667eea;">Basic Information</h3>
+
+                    <div class="form-group">
+                        <label for="huntTitle">Hunt Title *</label>
+                        <input type="text" id="huntTitle" class="form-control" required
+                            placeholder="e.g., Discover Port Louis">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="huntDescription">Description</label>
+                        <textarea id="huntDescription" class="form-control" rows="3"
+                            placeholder="Describe what makes this hunt special..."></textarea>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label for="huntDifficulty">Difficulty Level *</label>
+                            <select id="huntDifficulty" class="form-control" required>
+                                <option value="easy">Easy</option>
+                                <option value="medium">Medium</option>
+                                <option value="hard">Hard</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="huntStartLocation">Starting Location *</label>
+                            <select id="huntStartLocation" class="form-control" required>
+                                <option value="">Loading places...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label for="huntDuration">Estimated Duration (minutes)</label>
+                            <input type="number" id="huntDuration" class="form-control" min="15" max="480"
+                                placeholder="60">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="huntDistance">Total Distance (km)</label>
+                            <input type="number" id="huntDistance" class="form-control" min="0.1" max="100" step="0.1"
+                                placeholder="5.0">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Checkpoints Section -->
+                <div style="margin-bottom: 30px;">
+                    <h3 style="margin-bottom: 15px; color: #667eea;">Checkpoints (minimum 3 required)</h3>
+
+                    <div class="checkpoint-add-section">
+                        <h4 style="margin-bottom: 15px;">Add Checkpoint</h4>
+
+                        <div class="form-group">
+                            <label for="checkpointPlaceSelect">Select Place *</label>
+                            <select id="checkpointPlaceSelect" class="form-control"
+                                onchange="app.onCheckpointPlaceChange()">
+                                <option value="">Loading places...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="checkpointClue">Clue Text *</label>
+                            <textarea id="checkpointClue" class="form-control" rows="2"
+                                placeholder="Give hunters a clue to find this place..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="checkpointHint">Hint Text (optional)</label>
+                            <textarea id="checkpointHint" class="form-control" rows="2"
+                                placeholder="Provide an optional hint if they get stuck..."></textarea>
+                        </div>
+
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label for="checkpointChallenge">Challenge Type *</label>
+                                <select id="checkpointChallenge" class="form-control"
+                                    onchange="app.onChallengeTypeChange()">
+                                    <option value="geofence">📍 Geofence (Location Check)</option>
+                                    <option value="QR_scan">📱 QR Code Scan</option>
+                                    <option value="photo">📷 Photo Upload</option>
+                                    <option value="quiz">❓ Quiz Question</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="checkpointPoints">Points Awarded</label>
+                                <input type="number" id="checkpointPoints" class="form-control" min="5" max="100"
+                                    value="10">
+                            </div>
+                        </div>
+
+                        <!-- Challenge-Specific Configuration -->
+                        <div id="challengeConfig" style="margin: 20px 0;"></div>
+
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label for="checkpointTimeLimit">Time Limit (minutes, optional)</label>
+                                <input type="number" id="checkpointTimeLimit" class="form-control" min="1" max="120"
+                                    placeholder="No limit">
+                            </div>
+
+                            <div class="form-group">
+                                <label
+                                    style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-top: 25px;">
+                                    <input type="checkbox" id="checkpointMandatory" checked>
+                                    <span>Mandatory Checkpoint</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn btn-secondary btn-block" onclick="app.addCheckpoint()">
+                            ➕ Add Checkpoint
+                        </button>
+                    </div>
+
+                    <!-- Checkpoints List -->
+                    <div id="huntCheckpointsList" style="margin-top: 15px;">
+                        <p class="empty-checkpoint-state">No checkpoints added yet (minimum 3 required)</p>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="app.closeHuntCreationModal()">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        Create Hunt
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/db.js"></script>
+    <script src="js/app.js"></script>
+
+    <script>
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js')
+                .then(reg => console.log('Service Worker registered', reg))
+                .catch(err => console.error('Service Worker registration failed', err));
+        }
+
+        // Check if app can be installed
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // Show install button
+            console.log('App can be installed!');
+        });
+    </script>
+</body>
+
+</html>
