@@ -1101,27 +1101,288 @@ class TreasureHuntApp {
 
         if (data && data.success && data.data.length > 0) {
             container.innerHTML = data.data.map(place => `
-                <div class="card" style="padding: 15px; margin: 10px 0;">
-                    <h3>${place.name}</h3>
-                    <p>${place.description || ''}</p>
-                    <div style="font-size: 13px; color: #777;">
-                        📍 ${place.city || 'N/A'} | 
-                        ${place.place_type}
-                        ${place.distance ? ` | ${place.distance.toFixed(1)} km away` : ''}
+            <div class="place-card" onclick="app.showPlaceDetail(${place.place_id})">
+                <div class="place-card-image">
+                    ${place.image_url
+                    ? `<img src="${place.image_url}" alt="${place.name}">`
+                    : `<div class="place-placeholder">${this.getPlaceIcon(place.place_type)}</div>`
+                }
+                    <div class="place-type-badge">${place.place_type}</div>
+                </div>
+                <div class="place-card-content">
+                    <h3 class="place-name">${place.name}</h3>
+                    <p class="place-description">${this.truncateText(place.description || 'No description available', 100)}</p>
+                    <div class="place-meta">
+                        <span class="place-location">📍 ${place.city || 'N/A'}</span>
+                        ${place.distance ? `<span class="place-distance">🚶 ${place.distance.toFixed(1)} km away</span>` : ''}
                     </div>
                 </div>
-            `).join('');
+            </div>
+        `).join('');
 
             // Add markers to map
             if (this.map) {
                 data.data.forEach(place => {
                     L.marker([place.latitude, place.longitude])
                         .addTo(this.map)
-                        .bindPopup(`<strong>${place.name}</strong><br>${place.place_type}`);
+                        .bindPopup(`<strong>${place.name}</strong><br>${place.place_type}`)
+                        .on('click', () => {
+                            this.showPlaceDetail(place.place_id);
+                        });
                 });
             }
         } else {
             container.innerHTML = '<div class="empty-state"><p>No places found nearby</p></div>';
+        }
+    }
+
+    // Get icon for place type
+    getPlaceIcon(placeType) {
+        const icons = {
+            'landmark': '🏛️',
+            'park': '🌳',
+            'museum': '🏛️',
+            'restaurant': '🍽️',
+            'cafe': '☕',
+            'beach': '🏖️',
+            'mountain': '⛰️',
+            'historical': '🏰',
+            'temple': '⛩️',
+            'church': '⛪',
+            'market': '🏪',
+            'viewpoint': '👁️',
+            'nature': '🌿',
+            'urban': '🏙️',
+            'adventure': '🎒',
+            'cultural': '🎭',
+            'entertainment': '🎪',
+            'shopping': '🛍️'
+        };
+        return icons[placeType.toLowerCase()] || '📍';
+    }
+
+    // Truncate text
+    truncateText(text, maxLength) {
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength) + '...';
+    }
+
+    // Show place detail modal
+    async showPlaceDetail(placeId) {
+        const modal = document.getElementById('place-detail-modal');
+        const content = document.getElementById('place-detail-content');
+
+        // Show modal with loading state
+        content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+        modal.classList.add('active');
+
+        // Fetch place details
+        const data = await this.apiRequest(`/places/${placeId}`);
+
+        if (data && data.success) {
+            const place = data.data;
+
+            // Calculate distance if user location is available
+            let distanceInfo = '';
+            if (this.currentLocation) {
+                const distance = this.calculateDistance(
+                    this.currentLocation.lat,
+                    this.currentLocation.lon,
+                    place.latitude,
+                    place.longitude
+                );
+                distanceInfo = `
+                <div class="detail-distance">
+                    <span class="distance-icon">🚶</span>
+                    <span class="distance-text">${distance.toFixed(2)} km away</span>
+                </div>
+            `;
+            }
+
+            content.innerHTML = `
+            <div class="place-detail-header">
+                ${place.image_url
+                    ? `<img src="${place.image_url}" alt="${place.name}" class="place-detail-image">`
+                    : `<div class="place-detail-placeholder">${this.getPlaceIcon(place.place_type)}</div>`
+                }
+                <button class="modal-close-btn" onclick="app.closePlaceDetailModal()">×</button>
+            </div>
+            
+            <div class="place-detail-body">
+                <h2 class="place-detail-title">${place.name}</h2>
+                
+                <div class="place-detail-meta">
+                    <span class="place-type-tag">${place.place_type}</span>
+                    ${place.city ? `<span class="place-location-tag">📍 ${place.city}</span>` : ''}
+                </div>
+                
+                ${distanceInfo}
+                
+                <div class="place-detail-section">
+                    <h3>📝 Description</h3>
+                    <p>${place.description || 'No description available for this place.'}</p>
+                </div>
+                
+                ${place.address ? `
+                    <div class="place-detail-section">
+                        <h3>📍 Address</h3>
+                        <p>${place.address}</p>
+                    </div>
+                ` : ''}
+                
+                <div class="place-detail-section">
+                    <h3>📊 Statistics</h3>
+                    <div class="place-stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-icon">🎯</div>
+                            <div class="stat-info">
+                                <div class="stat-value">${place.used_in_hunts || 0}</div>
+                                <div class="stat-label">Used in Hunts</div>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-icon">👥</div>
+                            <div class="stat-info">
+                                <div class="stat-value">${place.visit_count || 0}</div>
+                                <div class="stat-label">Visits</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="place-detail-section">
+                    <h3>🗺️ Location</h3>
+                    <div id="place-detail-map" style="height: 250px; border-radius: 8px; margin-top: 10px;"></div>
+                </div>
+                
+                <div class="place-detail-actions">
+                    <button class="btn btn-primary" onclick="app.getDirections(${place.latitude}, ${place.longitude})">
+                        🧭 Get Directions
+                    </button>
+                    ${this.userInfo.user_type === 'creator' || this.userInfo.user_type === 'admin' ? `
+                        <button class="btn btn-secondary" onclick="app.editPlace(${place.place_id})">
+                            ✏️ Edit Place
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+
+            // Initialize map for this place
+            setTimeout(() => {
+                this.initPlaceDetailMap(place.latitude, place.longitude, place.name);
+            }, 100);
+        } else {
+            content.innerHTML = `
+            <div class="error-state">
+                <p>Failed to load place details</p>
+                <button class="btn btn-secondary" onclick="app.closePlaceDetailModal()">Close</button>
+            </div>
+        `;
+        }
+    }
+
+    // Close place detail modal
+    closePlaceDetailModal() {
+        const modal = document.getElementById('place-detail-modal');
+        modal.classList.remove('active');
+
+        // Clean up map if it exists
+        if (this.placeDetailMap) {
+            this.placeDetailMap.remove();
+            this.placeDetailMap = null;
+        }
+    }
+
+    // Initialize map for place detail
+    initPlaceDetailMap(lat, lon, placeName) {
+        const mapElement = document.getElementById('place-detail-map');
+        if (!mapElement) return;
+
+        // Clean up existing map
+        if (this.placeDetailMap) {
+            this.placeDetailMap.remove();
+        }
+
+        // Create new map
+        this.placeDetailMap = L.map('place-detail-map').setView([lat, lon], 15);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(this.placeDetailMap);
+
+        // Add place marker
+        L.marker([lat, lon])
+            .addTo(this.placeDetailMap)
+            .bindPopup(`<strong>${placeName}</strong>`)
+            .openPopup();
+
+        // Add user location if available
+        if (this.currentLocation) {
+            L.marker([this.currentLocation.lat, this.currentLocation.lon], {
+                icon: L.icon({
+                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41]
+                })
+            })
+                .addTo(this.placeDetailMap)
+                .bindPopup('You are here');
+
+            // Draw line between user and place
+            L.polyline([
+                [this.currentLocation.lat, this.currentLocation.lon],
+                [lat, lon]
+            ], {
+                color: '#667eea',
+                weight: 3,
+                opacity: 0.7,
+                dashArray: '10, 10'
+            }).addTo(this.placeDetailMap);
+        }
+    }
+
+    // Get directions to place
+    getDirections(lat, lon) {
+        if (this.currentLocation) {
+            // Open Google Maps with directions
+            const url = `https://www.google.com/maps/dir/${this.currentLocation.lat},${this.currentLocation.lon}/${lat},${lon}`;
+            window.open(url, '_blank');
+        } else {
+            // Just open the location
+            const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+            window.open(url, '_blank');
+        }
+    }
+
+    // Edit place (for creators/admins)
+    editPlace(placeId) {
+        this.closePlaceDetailModal();
+        // Implement edit functionality - can use your existing showCreatePlaceModal
+        this.loadPlaceForEdit(placeId);
+    }
+
+    // Load place data for editing
+    async loadPlaceForEdit(placeId) {
+        const data = await this.apiRequest(`/places/${placeId}`);
+
+        if (data && data.success) {
+            const place = data.data;
+
+            // Show place modal in edit mode
+            document.getElementById('placeModalTitle').textContent = 'Edit Place';
+            document.getElementById('placeId').value = place.place_id;
+            document.getElementById('placeName').value = place.name;
+            document.getElementById('placeDescription').value = place.description || '';
+            document.getElementById('latitude').value = place.latitude;
+            document.getElementById('longitude').value = place.longitude;
+            document.getElementById('city').value = place.city || '';
+            document.getElementById('placeType').value = place.place_type;
+
+            document.getElementById('placeModal').classList.add('active');
         }
     }
 
@@ -2096,11 +2357,11 @@ class TreasureHuntApp {
             console.log('Full response:', data);
             console.log('Has level_up key?', 'level_up' in (data.data || {}));
             console.log('Level up data:', data.data?.level_up);
-            
+
             // Check if hunt is completed
             if (data.data && data.data.hunt_completed === true) {
                 console.log('HUNT COMPLETED! Showing completion screen...');
-                
+
                 // Show level up modal first if user leveled up
                 if (data.data.level_up && data.data.level_up.leveled_up === true) {
                     console.log('User leveled up! Showing modal...');
@@ -2108,7 +2369,7 @@ class TreasureHuntApp {
                 } else {
                     console.log('No level up on hunt completion');
                 }
-                
+
                 // Store completion data temporarily
                 this.huntCompletionData = {
                     hunt_title: data.data.hunt_title || this.activeHuntProgress.hunt_title,
@@ -2117,7 +2378,7 @@ class TreasureHuntApp {
                     badge_awarded: data.data.badge_awarded || false,
                     level_up: data.data.level_up
                 };
-                
+
                 // Reload progress to get updated data, then show completion
                 const progressData = await this.apiRequest(`/progress/${this.activeHuntProgress.progress_id}`);
                 if (progressData && progressData.success) {
@@ -2127,17 +2388,17 @@ class TreasureHuntApp {
                     // Fallback: show completion anyway
                     this.showHuntCompletion();
                 }
-                
+
                 return; // Exit early since hunt is complete
             }
-            
+
             // Normal checkpoint completion (not final checkpoint)
             console.log('Normal checkpoint completion');
             console.log('Checking for level up...');
             console.log('data.data exists?', !!data.data);
             console.log('data.data.level_up exists?', !!(data.data && data.data.level_up));
             console.log('leveled_up value:', data.data?.level_up?.leveled_up);
-            
+
             // Check for level up - ONLY show modal if actually leveled up
             if (data.data && data.data.level_up && data.data.level_up.leveled_up === true) {
                 console.log('✅ LEVEL UP CONFIRMED - Showing modal!');
@@ -2145,7 +2406,7 @@ class TreasureHuntApp {
             } else {
                 console.log('❌ No level up - Modal NOT shown');
             }
-            
+
             // Show success message
             const pointsMessage = `🎉 Checkpoint completed! +${this.currentCheckpoint.points_awarded} points`;
             alert(pointsMessage);
@@ -2177,11 +2438,11 @@ class TreasureHuntApp {
 
     showHuntCompletion() {
         const container = document.getElementById('checkpoint-container');
-        
+
         // Use stored completion data or fall back to activeHuntProgress
         const completionData = this.huntCompletionData || {};
         const progress = this.activeHuntProgress;
-        
+
         const huntTitle = completionData.hunt_title || (progress ? progress.hunt_title : 'Treasure Hunt');
         const totalPoints = completionData.total_points_earned || (progress ? progress.points_earned : 0);
         const checkpointCount = progress ? progress.checkpoints.length : 0;
@@ -2224,7 +2485,7 @@ class TreasureHuntApp {
 
         // Load and display current level info
         this.loadCompletionLevelInfo();
-        
+
         // Clear completion data
         this.huntCompletionData = null;
     }
@@ -2399,18 +2660,18 @@ class TreasureHuntApp {
             console.log('No level up occurred, skipping modal');
             return;
         }
-        
+
         // Also check that the level actually changed
         if (levelUpData.old_level === levelUpData.new_level) {
             console.log('Level did not change, skipping modal');
             return;
         }
-        
+
         // Create modal overlay
         const modalOverlay = document.createElement('div');
         modalOverlay.className = 'level-up-modal-overlay';
         modalOverlay.id = 'levelUpModal';
-        
+
         const badgesHTML = levelUpData.badges_earned && levelUpData.badges_earned.length > 0
             ? levelUpData.badges_earned.map(badge => `
                 <div class="earned-badge">
@@ -2422,7 +2683,7 @@ class TreasureHuntApp {
                 </div>
             `).join('')
             : '';
-        
+
         modalOverlay.innerHTML = `
             <div class="level-up-modal">
                 <div class="level-up-animation">
@@ -2472,9 +2733,9 @@ class TreasureHuntApp {
                 </button>
             </div>
         `;
-        
+
         document.body.appendChild(modalOverlay);
-        
+
         // Animate in
         setTimeout(() => {
             modalOverlay.classList.add('show');
