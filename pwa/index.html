@@ -266,6 +266,45 @@
             </form>
         </div>
     </div>
+
+    <!-- Photo Upload Modal -->
+    <div id="photo-upload-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Upload Place Photo</h2>
+                <button class="close-btn" onclick="app.closePhotoUploadModal()">×</button>
+            </div>
+            <form id="photo-upload-form" onsubmit="app.uploadPlacePhoto(event)">
+                <input type="hidden" id="upload-place-id">
+
+                <div class="form-group">
+                    <label for="place-photo-input">Select Photo</label>
+                    <input type="file" id="place-photo-input" accept="image/jpeg,image/jpg,image/png,image/webp"
+                        onchange="app.handlePhotoSelect(event)" required>
+                    <small class="form-text">Maximum file size: 5MB. Accepted formats: JPEG, PNG, WebP</small>
+                </div>
+
+                <div id="photo-preview" class="photo-preview"></div>
+
+                <div class="upload-guidelines">
+                    <h4>📸 Photo Guidelines</h4>
+                    <ul>
+                        <li>✓ Clear, high-quality image of the place</li>
+                        <li>✓ Good lighting and framing</li>
+                        <li>✓ Representative of the actual location</li>
+                        <li>✗ No watermarks or text overlays</li>
+                        <li>✗ No offensive or inappropriate content</li>
+                    </ul>
+                    <p class="note">Your photo will be reviewed by an admin before being displayed.</p>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    📤 Upload Photo
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- Hunt Creation Modal -->
     <div id="huntModal" class="modal">
         <div class="modal-content" style="max-width: 800px;">

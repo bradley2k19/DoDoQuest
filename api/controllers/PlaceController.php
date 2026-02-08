@@ -125,15 +125,21 @@ class PlaceController {
      * GET /api/places/{id}
      */
     private function getById($id) {
-        $query = "SELECT p.*, u.username as created_by_username,
-                         GROUP_CONCAT(DISTINCT c.category_id) as category_ids,
-                         GROUP_CONCAT(DISTINCT c.name) as categories
-                  FROM places p
-                  LEFT JOIN users u ON p.created_by_user_id = u.user_id
-                  LEFT JOIN place_category pc ON p.place_id = pc.place_id
-                  LEFT JOIN categories c ON pc.category_id = c.category_id
-                  WHERE p.place_id = :id AND p.is_verified = 1 AND p.status = 'approved'
-                  GROUP BY p.place_id";
+        $query = "SELECT p.*, 
+                        p.approved_photo_url as image_url,
+                        u.username as created_by_username,
+                        GROUP_CONCAT(DISTINCT c.category_id) as category_ids,
+                        GROUP_CONCAT(DISTINCT c.name) as categories,
+                        (SELECT COUNT(*) FROM checkpoints WHERE place_id = p.place_id) as used_in_hunts,
+                        (SELECT COUNT(*) FROM checkpoint_completions cc 
+                        INNER JOIN checkpoints c ON cc.checkpoint_id = c.checkpoint_id 
+                        WHERE c.place_id = p.place_id) as visit_count
+                FROM places p
+                LEFT JOIN users u ON p.created_by_user_id = u.user_id
+                LEFT JOIN place_category pc ON p.place_id = pc.place_id
+                LEFT JOIN categories c ON pc.category_id = c.category_id
+                WHERE p.place_id = :id AND p.is_verified = 1 AND p.status = 'approved'
+                GROUP BY p.place_id";
         
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':id', $id);
@@ -152,6 +158,7 @@ class PlaceController {
         
         Response::success($place, 'Place retrieved successfully');
     }
+
     
     /**
      * Create new place
@@ -237,7 +244,8 @@ class PlaceController {
         }
         
         $sql = "SELECT p.*, 
-                       GROUP_CONCAT(c.name) as categories";
+                    p.approved_photo_url as image_url,
+                    GROUP_CONCAT(c.name) as categories";
         
         // Add distance calculation if coordinates provided
         if ($lat && $lon) {
@@ -249,9 +257,9 @@ class PlaceController {
         }
         
         $sql .= " FROM places p
-                  LEFT JOIN place_category pc ON p.place_id = pc.place_id
-                  LEFT JOIN categories c ON pc.category_id = c.category_id
-                  WHERE " . implode(' AND ', $where);
+                LEFT JOIN place_category pc ON p.place_id = pc.place_id
+                LEFT JOIN categories c ON pc.category_id = c.category_id
+                WHERE " . implode(' AND ', $where);
         
         $sql .= " GROUP BY p.place_id";
         

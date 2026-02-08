@@ -354,6 +354,28 @@
             width: 100%;
             display: block;
         }
+        /* Photo Review Cards - Responsive */
+        @media (max-width: 1024px) {
+            #photos-content > div > div {
+                grid-template-columns: 1fr !important;
+            }
+            
+            #photos-content > div > div > div:last-child {
+                border-left: none !important;
+                border-top: 1px solid #eee;
+                flex-direction: row !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            #photos-content > div > div > div:first-child {
+                height: 200px;
+            }
+            
+            #photos-content > div > div > div:last-child {
+                flex-direction: column !important;
+            }
+        }
     </style>
 </head>
 <body>

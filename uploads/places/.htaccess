@@ -1,0 +1,9 @@
+# Allow access to all files in uploads/places
+<FilesMatch "\.(jpg|jpeg|png|webp)$">
+    Require all granted
+</FilesMatch>
+
+# Deny access to PHP scripts (security!)
+<FilesMatch "\.php$">
+    Require all denied
+</FilesMatch>

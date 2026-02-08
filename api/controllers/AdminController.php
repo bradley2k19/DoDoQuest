@@ -250,8 +250,8 @@ class AdminController {
         $stmt->execute();
         $pendingPlaces = $stmt->fetch()['total'];
         
-        // Pending photos
-        $pendingPhotosQuery = "SELECT COUNT(*) as total FROM photo_uploads WHERE status = 'pending'";
+        // Pending photos - UPDATED to use place_photos table
+        $pendingPhotosQuery = "SELECT COUNT(*) as total FROM place_photos WHERE status = 'pending'";
         $stmt = $this->conn->prepare($pendingPhotosQuery);
         $stmt->execute();
         $pendingPhotos = $stmt->fetch()['total'];
@@ -346,13 +346,17 @@ class AdminController {
     private function getPendingPhotos() {
         AuthMiddleware::verifyAdmin();
         
-        $query = "SELECT ph.*, u.username, p.name as place_name
-                  FROM photo_uploads ph
-                  INNER JOIN users u ON ph.user_id = u.user_id
-                  LEFT JOIN places p ON ph.place_id = p.place_id
-                  WHERE ph.status = 'pending'
-                  ORDER BY ph.uploaded_at ASC
-                  LIMIT 50";
+        $query = "SELECT pp.*, 
+                        p.name as place_name,
+                        p.city,
+                        u.username as uploader_username,
+                        u.full_name as uploader_name
+                FROM place_photos pp
+                INNER JOIN places p ON pp.place_id = p.place_id
+                INNER JOIN users u ON pp.user_id = u.user_id
+                WHERE pp.status = 'pending'
+                ORDER BY pp.uploaded_at ASC
+                LIMIT 50";
         
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
@@ -360,10 +364,11 @@ class AdminController {
         
         Response::success($photos, 'Pending photos retrieved');
     }
-    
+
     /**
      * Review photo (approve/reject)
      * POST /api/admin/review-photo
+     * Body: { "photo_id": 1, "action": "approve" } or { "photo_id": 1, "action": "reject", "reason": "..." }
      */
     private function reviewPhoto() {
         $admin_id = AuthMiddleware::verifyAdmin();
@@ -371,52 +376,111 @@ class AdminController {
         
         $photo_id = $data['photo_id'] ?? null;
         $action = $data['action'] ?? null;
-        $admin_notes = $data['admin_notes'] ?? null;
+        $reason = $data['reason'] ?? null;
         
         if (!$photo_id || !$action || !in_array($action, ['approve', 'reject'])) {
-            Response::error('Invalid data', 422);
+            Response::error('Invalid data. Required: photo_id and action (approve/reject)', 422);
         }
         
         // Get photo details
-        $photoQuery = "SELECT * FROM photo_uploads WHERE photo_id = :photo_id";
+        $photoQuery = "SELECT * FROM place_photos WHERE photo_id = :photo_id AND status = 'pending'";
         $stmt = $this->conn->prepare($photoQuery);
         $stmt->execute([':photo_id' => $photo_id]);
         
         if ($stmt->rowCount() === 0) {
-            Response::error('Photo not found', 404);
+            Response::error('Photo not found or already processed', 404);
         }
         
         $photo = $stmt->fetch();
-        $status = ($action === 'approve') ? 'approved' : 'rejected';
-        $points = ($action === 'approve') ? 25 : 0;
         
-        // Update photo status
-        $updateQuery = "UPDATE photo_uploads 
-                       SET status = :status, 
-                           points_awarded = :points,
-                           admin_notes = :notes,
-                           reviewed_at = NOW(),
-                           reviewed_by_user_id = :admin_id
-                       WHERE photo_id = :photo_id";
-        
-        $stmt = $this->conn->prepare($updateQuery);
-        $stmt->execute([
-            ':status' => $status,
-            ':points' => $points,
-            ':notes' => $admin_notes,
-            ':admin_id' => $admin_id,
-            ':photo_id' => $photo_id
-        ]);
-        
-        // Award points if approved
         if ($action === 'approve') {
-            $userQuery = "UPDATE users SET total_points = total_points + :points 
-                         WHERE user_id = :user_id";
-            $stmt = $this->conn->prepare($userQuery);
-            $stmt->execute([':points' => $points, ':user_id' => $photo['user_id']]);
+            // Move file from temp to approved directory
+            $baseDir = dirname(__DIR__, 2) . '/uploads/places/';
+            $tempDir = $baseDir . 'temp/';
+            $approvedDir = $baseDir . 'approved/';
+            
+            $oldPath = $tempDir . $photo['file_name'];
+            $newFileName = 'approved_' . $photo['file_name'];
+            $newPath = $approvedDir . $newFileName;
+            $newUrl = '/treasure_hunt/uploads/places/approved/' . $newFileName;
+            
+            if (file_exists($oldPath)) {
+                rename($oldPath, $newPath);
+            }
+            
+            // Update photo status
+            $updateQuery = "UPDATE place_photos 
+                        SET status = 'approved',
+                            photo_url = :new_url,
+                            file_name = :new_file_name,
+                            reviewed_at = NOW(),
+                            reviewed_by = :reviewer_id,
+                            is_primary = 1
+                        WHERE photo_id = :photo_id";
+            
+            $stmt = $this->conn->prepare($updateQuery);
+            $stmt->execute([
+                ':new_url' => $newUrl,
+                ':new_file_name' => $newFileName,
+                ':reviewer_id' => $admin_id,
+                ':photo_id' => $photo_id
+            ]);
+            
+            // Unset other primary photos for this place
+            $unsetQuery = "UPDATE place_photos 
+                        SET is_primary = 0 
+                        WHERE place_id = :place_id AND photo_id != :photo_id";
+            $stmt = $this->conn->prepare($unsetQuery);
+            $stmt->execute([
+                ':place_id' => $photo['place_id'],
+                ':photo_id' => $photo_id
+            ]);
+            
+            // Update place with approved photo
+            $placeUpdate = "UPDATE places 
+                        SET approved_photo_url = :photo_url 
+                        WHERE place_id = :place_id";
+            $stmt = $this->conn->prepare($placeUpdate);
+            $stmt->execute([
+                ':photo_url' => $newUrl,
+                ':place_id' => $photo['place_id']
+            ]);
+            
+            Response::success([
+                'photo_id' => $photo_id,
+                'photo_url' => $newUrl
+            ], 'Photo approved successfully');
+            
+        } else {
+            // Reject photo
+            if (!$reason) {
+                Response::error('Rejection reason is required', 422);
+            }
+            
+            // Delete file
+            $baseDir = dirname(__DIR__, 2) . 'uploads/places/';
+            $filePath = $baseDir . 'temp/' . $photo['file_name'];
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
+            
+            // Update photo status
+            $updateQuery = "UPDATE place_photos 
+                        SET status = 'rejected',
+                            rejection_reason = :reason,
+                            reviewed_at = NOW(),
+                            reviewed_by = :reviewer_id
+                        WHERE photo_id = :photo_id";
+            
+            $stmt = $this->conn->prepare($updateQuery);
+            $stmt->execute([
+                ':reason' => $reason,
+                ':reviewer_id' => $admin_id,
+                ':photo_id' => $photo_id
+            ]);
+            
+            Response::success(['photo_id' => $photo_id], 'Photo rejected');
         }
-        
-        Response::success(null, "Photo $action" . "d successfully");
     }
     
     /**

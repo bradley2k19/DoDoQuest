@@ -2488,3 +2488,77 @@ input[type="radio"] {
         flex-direction: column;
     }
 }
+
+/* Upload Photo Button on Place Detail */
+.upload-photo-btn {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.95);
+    border: none;
+    border-radius: 25px;
+    font-weight: 600;
+    color: #667eea;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.upload-photo-btn:hover {
+    background: white;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Photo Upload Modal */
+.photo-preview {
+    margin: 20px 0;
+}
+
+.photo-preview-container {
+    text-align: center;
+}
+
+.photo-preview-container img {
+    max-width: 100%;
+    max-height: 400px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.photo-info {
+    font-size: 14px;
+    color: #666;
+}
+
+.upload-guidelines {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.upload-guidelines h4 {
+    margin: 0 0 10px 0;
+    color: #333;
+}
+
+.upload-guidelines ul {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.upload-guidelines li {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+.upload-guidelines .note {
+    margin: 10px 0 0 0;
+    font-size: 13px;
+    color: #888;
+    font-style: italic;
+}

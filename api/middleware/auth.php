@@ -28,12 +28,13 @@ class AuthMiddleware {
             exit();
         }
         
-        if (!isset($decoded->data->user_id)) {
+        if (!isset($decoded->data->user_id) && !isset($decoded->data->admin_id)) {
             Response::error('Invalid token payload.', 401);
             exit();
         }
-        
-        return $decoded->data->user_id;
+
+        return $decoded->data->user_id ?? $decoded->data->admin_id;
+
     }
     
     /**

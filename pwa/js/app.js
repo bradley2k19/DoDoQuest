@@ -1206,6 +1206,13 @@ class TreasureHuntApp {
                     : `<div class="place-detail-placeholder">${this.getPlaceIcon(place.place_type)}</div>`
                 }
                 <button class="modal-close-btn" onclick="app.closePlaceDetailModal()">×</button>
+                
+                <!-- Upload Photo Button -->
+                ${!place.image_url ? `
+                    <button class="upload-photo-btn" onclick="app.showPhotoUploadForm(${place.place_id})">
+                        📷 Add Photo
+                    </button>
+                ` : ''}
             </div>
             
             <div class="place-detail-body">
@@ -1355,6 +1362,118 @@ class TreasureHuntApp {
             // Just open the location
             const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
             window.open(url, '_blank');
+        }
+    }
+
+    // Show photo upload form
+    showPhotoUploadForm(placeId) {
+        const modal = document.getElementById('photo-upload-modal');
+        const form = document.getElementById('photo-upload-form');
+
+        // Reset form
+        form.reset();
+        document.getElementById('upload-place-id').value = placeId;
+        document.getElementById('photo-preview').innerHTML = '';
+
+        modal.classList.add('active');
+    }
+
+    // Close photo upload modal
+    closePhotoUploadModal() {
+        document.getElementById('photo-upload-modal').classList.remove('active');
+    }
+
+    // Handle photo file selection
+    handlePhotoSelect(event) {
+        const file = event.target.files[0];
+        const preview = document.getElementById('photo-preview');
+
+        if (!file) {
+            preview.innerHTML = '';
+            return;
+        }
+
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            alert('Please select a valid image file (JPEG, PNG, or WebP)');
+            event.target.value = '';
+            preview.innerHTML = '';
+            return;
+        }
+
+        // Validate file size (5MB max)
+        if (file.size > 5242880) {
+            alert('File size must be less than 5MB');
+            event.target.value = '';
+            preview.innerHTML = '';
+            return;
+        }
+
+        // Show preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            preview.innerHTML = `
+            <div class="photo-preview-container">
+                <img src="${e.target.result}" alt="Preview">
+                <p class="photo-info">
+                    <strong>${file.name}</strong><br>
+                    Size: ${(file.size / 1024 / 1024).toFixed(2)} MB
+                </p>
+            </div>
+        `;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // Upload place photo
+    async uploadPlacePhoto(event) {
+        event.preventDefault();
+
+        const placeId = document.getElementById('upload-place-id').value;
+        const fileInput = document.getElementById('place-photo-input');
+        const file = fileInput.files[0];
+
+        if (!file) {
+            alert('Please select a photo');
+            return;
+        }
+
+        const submitBtn = event.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Uploading...';
+
+        try {
+            // Create FormData
+            const formData = new FormData();
+            formData.append('photo', file);
+            formData.append('place_id', placeId);
+
+            // Upload
+            const response = await fetch(`${API_URL}/place-photos/upload`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.token}`
+                },
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert('Photo uploaded successfully! It will be visible after admin approval.');
+                this.closePhotoUploadModal();
+                this.closePlaceDetailModal();
+            } else {
+                alert('Upload failed: ' + (data.message || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            alert('Failed to upload photo. Please try again.');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
         }
     }
 

@@ -130,6 +130,12 @@ try {
             $controller = new LevelController();
             $controller->handleRequest($method, $segments);
             break;
+
+        case 'place-photos':
+            require_once __DIR__ . '/controllers/PlacePhotoController.php';
+            $controller = new PlacePhotoController();
+            $controller->handleRequest($method, $segments);
+            break;
             
         case '':
             // API root - show available endpoints

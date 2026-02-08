@@ -27,11 +27,11 @@ function switchPage(page) {
     // Update active nav
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
     document.querySelector(`[data-page="${page}"]`).classList.add('active');
-    
+
     // Update active page
     document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active'));
     document.getElementById(`${page}-page`).classList.add('active');
-    
+
     // Update title
     const titles = {
         'dashboard': 'Dashboard',
@@ -44,13 +44,13 @@ function switchPage(page) {
         'hunts': 'Pending Hunts'
     };
     document.getElementById('page-title').textContent = titles[page] || 'Dashboard';
-    
+
     // Load page data
     loadPageData(page);
 }
 
 function loadPageData(page) {
-    switch(page) {
+    switch (page) {
         case 'dashboard':
             loadDashboardStats();
             break;
@@ -87,39 +87,47 @@ async function apiRequest(endpoint, options = {}) {
             ...options.headers
         }
     });
-    
+
     const data = await response.json();
-    
+
     if (!data.success && response.status === 401) {
         logout();
         return;
     }
-    
+
     return data;
 }
 
 // ========== DASHBOARD ==========
 async function loadDashboardStats() {
     const data = await apiRequest('/admin/dashboard-stats');
-    
-    if (data.success) {
+
+    if (data && data.success) {
         document.getElementById('stat-users').textContent = data.data.total_users;
         document.getElementById('stat-places').textContent = data.data.total_places;
         document.getElementById('stat-hunts').textContent = data.data.total_hunts;
         document.getElementById('stat-pending-places').textContent = data.data.pending_places;
-        document.getElementById('stat-pending-photos').textContent = data.data.pending_photos;
         document.getElementById('stat-pending-hunts').textContent = data.data.pending_hunts;
         document.getElementById('stat-active-progress').textContent = data.data.active_hunt_progress;
+        document.getElementById('stat-pending-photos').textContent = data.data.pending_photos;
     }
+
+    // Load pending photos count separately
+    // const photosData = await apiRequest('/place-photos/pending');
+    // if (photosData && photosData.success) {
+    //     document.getElementById('stat-pending-photos').textContent = photosData.data.length;
+    // } else {
+    //     document.getElementById('stat-pending-photos').textContent = '0';
+    // }
 }
 
 // ========== USER MANAGEMENT ==========
 async function loadAllUsers() {
     const container = document.getElementById('users-content');
     container.innerHTML = '<div class="loading">Loading...</div>';
-    
+
     const data = await apiRequest('/admin/users?limit=100');
-    
+
     if (data && data.success && data.data.length > 0) {
         container.innerHTML = `
             <table>
@@ -165,10 +173,10 @@ function showCreateUserModal() {
     document.getElementById('userForm').reset();
     document.getElementById('userId').value = '';
     document.getElementById('password').required = true;
-    
+
     // Show "Make Admin" checkbox when creating
     document.getElementById('makeAdmin').parentElement.style.display = 'block';
-    
+
     document.getElementById('userModal').classList.add('active');
 }
 
@@ -186,10 +194,10 @@ async function editUser(userId) {
             document.getElementById('userType').value = user.user_type;
             document.getElementById('accountStatus').value = user.account_status;
             document.getElementById('password').required = false;
-            
+
             // Hide "Make Admin" checkbox when editing
             document.getElementById('makeAdmin').parentElement.style.display = 'none';
-            
+
             document.getElementById('userModal').classList.add('active');
         }
     }
@@ -197,7 +205,7 @@ async function editUser(userId) {
 
 async function saveUser(event) {
     event.preventDefault();
-    
+
     const userId = document.getElementById('userId').value;
     const userData = {
         username: document.getElementById('username').value,
@@ -206,22 +214,22 @@ async function saveUser(event) {
         user_type: document.getElementById('userType').value,
         account_status: document.getElementById('accountStatus').value
     };
-    
+
     // Only include password if provided
     const password = document.getElementById('password').value;
     if (password) {
         userData.password = password;
     }
-    
+
     const isAdmin = document.getElementById('makeAdmin').checked;
-    
+
     if (userId) {
         // Update existing user
         const data = await apiRequest(`/admin/user/${userId}`, {
             method: 'PUT',
             body: JSON.stringify(userData)
         });
-        
+
         if (data && data.success) {
             alert('User updated successfully!');
             closeUserModal();
@@ -235,13 +243,13 @@ async function saveUser(event) {
             alert('Password is required for new users');
             return;
         }
-        
+
         const endpoint = isAdmin ? '/admin/create-admin' : '/auth/register';
         const data = await apiRequest(endpoint, {
             method: 'POST',
             body: JSON.stringify(userData)
         });
-        
+
         if (data && data.success) {
             alert(isAdmin ? 'Admin user created successfully!' : 'User created successfully!');
             closeUserModal();
@@ -257,7 +265,7 @@ async function deleteUser(userId, username) {
         const data = await apiRequest(`/admin/user/${userId}`, {
             method: 'DELETE'
         });
-        
+
         if (data && data.success) {
             alert('User deleted successfully!');
             loadAllUsers();
@@ -276,9 +284,9 @@ function closeUserModal() {
 async function loadAllPlaces() {
     const container = document.getElementById('places-manage-content');
     container.innerHTML = '<div class="loading">Loading...</div>';
-    
+
     const data = await apiRequest('/places?limit=100');
-    
+
     if (data && data.success && data.data.length > 0) {
         container.innerHTML = `
             <table>
@@ -342,9 +350,9 @@ async function editPlace(placeId) {
 
 async function savePlace(event) {
     event.preventDefault();
-    
+
     const placeId = document.getElementById('placeId').value;
-    
+
     // Get a user ID to assign as creator (use first active user)
     let creatorUserId = 1; // Default
     try {
@@ -355,7 +363,7 @@ async function savePlace(event) {
     } catch (e) {
         console.error('Could not fetch user for creator:', e);
     }
-    
+
     const placeData = {
         name: document.getElementById('placeName').value,
         description: document.getElementById('placeDescription').value,
@@ -367,14 +375,14 @@ async function savePlace(event) {
         category_ids: [2], // Default to Nature category
         created_by_user_id: creatorUserId // Add creator
     };
-    
+
     if (placeId) {
         // Update existing place
         const data = await apiRequest(`/admin/place/${placeId}`, {
             method: 'PUT',
             body: JSON.stringify(placeData)
         });
-        
+
         if (data && data.success) {
             alert('Place updated successfully!');
             closePlaceModal();
@@ -389,7 +397,7 @@ async function savePlace(event) {
             method: 'POST',
             body: JSON.stringify(placeData)
         });
-        
+
         if (data && data.success) {
             alert('Place created successfully!');
             closePlaceModal();
@@ -406,7 +414,7 @@ async function deletePlace(placeId, placeName) {
         const data = await apiRequest(`/admin/place/${placeId}`, {
             method: 'DELETE'
         });
-        
+
         if (data && data.success) {
             alert('Place deleted successfully!');
             loadAllPlaces();
@@ -425,9 +433,9 @@ function closePlaceModal() {
 async function loadAllCategories() {
     const container = document.getElementById('categories-manage-content');
     container.innerHTML = '<div class="loading">Loading...</div>';
-    
+
     const data = await apiRequest('/categories');
-    
+
     if (data && data.success && data.data.length > 0) {
         container.innerHTML = `
             <table>
@@ -485,21 +493,21 @@ async function editCategory(categoryId) {
 
 async function saveCategory(event) {
     event.preventDefault();
-    
+
     const categoryId = document.getElementById('categoryId').value;
     const categoryData = {
         name: document.getElementById('categoryName').value,
         description: document.getElementById('categoryDescription').value,
         icon_url: document.getElementById('categoryIcon').value
     };
-    
+
     if (categoryId) {
         // Update existing category
         const data = await apiRequest(`/admin/category/${categoryId}`, {
             method: 'PUT',
             body: JSON.stringify(categoryData)
         });
-        
+
         if (data && data.success) {
             alert('Category updated successfully!');
             closeCategoryModal();
@@ -513,7 +521,7 @@ async function saveCategory(event) {
             method: 'POST',
             body: JSON.stringify(categoryData)
         });
-        
+
         if (data && data.success) {
             alert('Category created successfully!');
             closeCategoryModal();
@@ -530,7 +538,7 @@ async function deleteCategory(categoryId, categoryName) {
         const data = await apiRequest(`/admin/category/${categoryId}`, {
             method: 'DELETE'
         });
-        
+
         if (data && data.success) {
             alert('Category deleted successfully!');
             loadAllCategories();
@@ -548,9 +556,9 @@ function closeCategoryModal() {
 async function loadAllHunts() {
     const container = document.getElementById('hunts-manage-content');
     container.innerHTML = '<div class="loading">Loading...</div>';
-    
+
     const data = await apiRequest('/hunts?limit=100');
-    
+
     if (data && data.success && data.data.length > 0) {
         container.innerHTML = `
             <table>
@@ -617,7 +625,7 @@ async function editHunt(huntId) {
 
 async function saveHunt(event) {
     event.preventDefault();
-    
+
     const huntId = document.getElementById('huntId').value;
     const huntData = {
         title: document.getElementById('huntTitle').value,
@@ -627,14 +635,14 @@ async function saveHunt(event) {
         is_active: document.getElementById('isActive').checked ? 1 : 0,
         is_featured: document.getElementById('isFeatured').checked ? 1 : 0
     };
-    
+
     if (huntId) {
         // Update existing hunt
         const data = await apiRequest(`/admin/hunt/${huntId}`, {
             method: 'PUT',
             body: JSON.stringify(huntData)
         });
-        
+
         if (data && data.success) {
             alert('Hunt updated successfully!');
             closeHuntModal();
@@ -646,18 +654,18 @@ async function saveHunt(event) {
         alert('Creating new hunts requires the full hunt creation flow with checkpoints.\n\nPlease use the user PWA to create hunts, then approve them from the admin panel.');
         closeHuntModal();
     }
-}                                                               
+}
 
 async function toggleHuntStatus(huntId, currentStatus) {
     const newStatus = currentStatus ? 0 : 1;
     const action = newStatus ? 'activate' : 'deactivate';
-    
+
     if (confirm(`Are you sure you want to ${action} this hunt?`)) {
         const data = await apiRequest(`/admin/hunt/${huntId}`, {
             method: 'PUT',
             body: JSON.stringify({ is_active: newStatus })
         });
-        
+
         if (data && data.success) {
             alert(`Hunt ${action}d successfully!`);
             loadAllHunts();
@@ -673,7 +681,7 @@ async function deleteHunt(huntId, huntTitle) {
         const data = await apiRequest(`/hunts/${huntId}`, {
             method: 'DELETE'
         });
-        
+
         if (data && data.success) {
             alert('Hunt deleted!');
             loadAllHunts();
@@ -687,11 +695,11 @@ function closeHuntModal() {
     document.getElementById('huntModal').classList.remove('active');
 }
 
-// ========== PENDING APPROVALS (Keep existing functions) ==========
+// ========== PENDING APPROVALS  ==========
 async function loadPendingPlaces() {
     const container = document.getElementById('places-content');
     const data = await apiRequest('/admin/pending-places');
-    
+
     if (data && data.success && data.data.length > 0) {
         container.innerHTML = `
             <table>
@@ -733,7 +741,7 @@ async function approvePlace(placeId) {
             method: 'POST',
             body: JSON.stringify({ place_id: placeId, action: 'approve' })
         });
-        
+
         if (data.success) {
             alert('Place approved!');
             loadPendingPlaces();
@@ -748,7 +756,7 @@ async function rejectPlace(placeId) {
             method: 'POST',
             body: JSON.stringify({ place_id: placeId, action: 'reject' })
         });
-        
+
         if (data.success) {
             alert('Place rejected!');
             loadPendingPlaces();
@@ -758,79 +766,102 @@ async function rejectPlace(placeId) {
 
 async function loadPendingPhotos() {
     const container = document.getElementById('photos-content');
-    const data = await apiRequest('/admin/pending-photos');
-    
+    container.innerHTML = '<div class="loading">Loading...</div>';
+
+    const data = await apiRequest('/place-photos/pending');
+
     if (data && data.success && data.data.length > 0) {
+        // Update dashboard count
+        document.getElementById('stat-pending-photos').textContent = data.data.length;
+
         container.innerHTML = `
-            <table>
-                <thead>
-                    <tr>
-                        <th>Photo</th>
-                        <th>User</th>
-                        <th>Place</th>
-                        <th>Type</th>
-                        <th>Uploaded</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${data.data.map(photo => `
-                        <tr>
-                            <td><img src="../public/${photo.file_path}" width="80" height="60" style="object-fit: cover; border-radius: 4px;"></td>
-                            <td>${photo.username}</td>
-                            <td>${photo.place_name || 'N/A'}</td>
-                            <td>${photo.upload_type}</td>
-                            <td>${new Date(photo.uploaded_at).toLocaleDateString()}</td>
-                            <td>
-                                <button class="btn btn-success" onclick="approvePhoto(${photo.photo_id})">Approve</button>
-                                <button class="btn btn-danger" onclick="rejectPhoto(${photo.photo_id})">Reject</button>
-                            </td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
+            <div style="display: grid; gap: 20px;">
+                ${data.data.map(photo => `
+                    <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: grid; grid-template-columns: 300px 1fr auto; gap: 20px;">
+                        <div style="height: 250px; overflow: hidden; background: #f0f0f0;">
+                            <img src="${photo.photo_url}" alt="${photo.place_name}" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                        <div style="padding: 20px; display: flex; flex-direction: column; justify-content: center;">
+                            <h3 style="margin: 0 0 15px 0; color: #333; font-size: 20px;">${photo.place_name}</h3>
+                            <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; font-size: 14px; color: #666;">
+                                <span>📍 ${photo.city || 'N/A'}</span>
+                                <span>👤 Uploaded by: ${photo.uploader_name} (@${photo.uploader_username})</span>
+                                <span>📅 ${new Date(photo.uploaded_at).toLocaleString()}</span>
+                            </div>
+                            <div style="font-size: 13px; color: #888;">
+                                <p style="margin: 5px 0;"><strong>File:</strong> ${photo.file_name}</p>
+                                <p style="margin: 5px 0;"><strong>Size:</strong> ${(photo.file_size / 1024 / 1024).toFixed(2)} MB</p>
+                            </div>
+                        </div>
+                        <div style="padding: 20px; display: flex; flex-direction: column; gap: 10px; justify-content: center; border-left: 1px solid #eee;">
+                            <button class="btn btn-success" onclick="approvePlacePhoto(${photo.photo_id}, '${photo.place_name.replace(/'/g, "\\'")}')">
+                                ✓ Approve
+                            </button>
+                            <button class="btn btn-danger" onclick="rejectPlacePhoto(${photo.photo_id})">
+                                ✗ Reject
+                            </button>
+                            <a href="${photo.photo_url}" target="_blank" class="btn btn-info" style="text-align: center; text-decoration: none;">
+                                🔍 Full Size
+                            </a>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
         `;
     } else {
-        container.innerHTML = '<div class="empty-state"><h3>No pending photos</h3><p>All photos have been reviewed!</p></div>';
+        container.innerHTML = '<div class="empty-state"><h3>✅ No pending photos</h3><p>All photos have been reviewed!</p></div>';
+        document.getElementById('stat-pending-photos').textContent = '0';
     }
 }
 
-async function approvePhoto(photoId) {
-    if (confirm('Approve this photo? User will earn 25 points.')) {
-        const data = await apiRequest('/admin/review-photo', {
+async function approvePlacePhoto(photoId, placeName) {
+    if (confirm(`Approve this photo for "${placeName}"?\n\nThis will set it as the place's primary photo.`)) {
+        const data = await apiRequest('/place-photos/approve', {
             method: 'POST',
-            body: JSON.stringify({ photo_id: photoId, action: 'approve' })
+            body: JSON.stringify({
+                photo_id: photoId,
+                set_as_primary: true
+            })
         });
-        
-        if (data.success) {
-            alert('Photo approved!');
+
+        if (data && data.success) {
+            alert('Photo approved successfully!');
             loadPendingPhotos();
             loadDashboardStats();
+        } else {
+            alert('Error: ' + (data?.message || 'Failed to approve photo'));
         }
     }
 }
 
-async function rejectPhoto(photoId) {
-    const notes = prompt('Rejection reason (optional):');
-    const data = await apiRequest('/admin/review-photo', {
-        method: 'POST',
-        body: JSON.stringify({ 
-            photo_id: photoId, 
-            action: 'reject',
-            admin_notes: notes
-        })
-    });
-    
-    if (data.success) {
-        alert('Photo rejected!');
-        loadPendingPhotos();
+async function rejectPlacePhoto(photoId) {
+    const reason = prompt('Please provide a reason for rejection:');
+
+    if (reason && reason.trim()) {
+        const data = await apiRequest('/place-photos/reject', {
+            method: 'POST',
+            body: JSON.stringify({
+                photo_id: photoId,
+                reason: reason.trim()
+            })
+        });
+
+        if (data && data.success) {
+            alert('Photo rejected');
+            loadPendingPhotos();
+            loadDashboardStats();
+        } else {
+            alert('Error: ' + (data?.message || 'Failed to reject photo'));
+        }
+    } else if (reason !== null) {
+        alert('Please provide a rejection reason');
     }
 }
 
 async function loadPendingHunts() {
     const container = document.getElementById('hunts-content');
     const data = await apiRequest('/admin/pending-hunts');
-    
+
     if (data && data.success && data.data.length > 0) {
         container.innerHTML = `
             <table>
@@ -871,7 +902,7 @@ async function approveHunt(huntId) {
         method: 'POST',
         body: JSON.stringify({ hunt_id: huntId, is_featured: featured ? 1 : 0 })
     });
-    
+
     if (data.success) {
         alert('Hunt approved!');
         loadPendingHunts();
